@@ -1,17 +1,45 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useApp, ARTICLES } from '@/lib/store';
+import { useApp } from '@/lib/store';
+import { fetchArticles, Article } from '@/lib/articles-api';
 import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
-import { PlusCircle, Calendar, TrendingUp, ArrowRight, BookOpen } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { PlusCircle, Calendar, TrendingUp, ArrowRight, Clock } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { user, logs, isAuthenticated, isLoading } = useApp();
   const router = useRouter();
+
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [articlesLoading, setArticlesLoading] = useState(true);
+
+  useEffect(() => {
+    const loadArticles = async () => {
+      try {
+        const data = await fetchArticles(undefined, 2);
+        setArticles(data);
+      } catch (error) {
+        console.error("Failed to load articles", error);
+      } finally {
+        setArticlesLoading(false);
+      }
+    };
+    
+    if (isAuthenticated) {
+      loadArticles();
+    }
+  }, [isAuthenticated]);
+
+  const getFallbackColor = (id: string) => {
+    const colors = ['bg-rose-100', 'bg-orange-100', 'bg-indigo-100', 'bg-blue-100', 'bg-green-100'];
+    const index = id.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -146,28 +174,59 @@ export default function DashboardPage() {
               </Link>
             </div>
             <div className="space-y-4">
-              {ARTICLES.slice(0, 2).map((article) => (
-                <Link key={article.id} href={`/learn`}>
-                  <Card className="p-0 overflow-hidden hover:shadow-lg transition-all duration-300 group h-full">
-                    <div className={`h-24 ${article.image} relative`}>
-                      <div className="absolute top-3 left-3">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/90 text-slate-800 backdrop-blur-sm">
-                          {article.category}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <h4 className="font-bold text-slate-900 mb-1 group-hover:text-rose-600 transition-colors line-clamp-2">
-                        {article.title}
-                      </h4>
-                      <div className="flex items-center text-xs text-slate-500 mt-2">
-                        <BookOpen className="w-3 h-3 mr-1" />
-                        {article.readTime} read
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
+              {articlesLoading ? (
+                <>
+                  <Skeleton className="h-32 w-full rounded-xl" />
+                  <Skeleton className="h-32 w-full rounded-xl" />
+                </>
+              ) : articles.length > 0 ? (
+                articles.map((article) => {
+                  const fallbackColor = getFallbackColor(article.id);
+                  return (
+                    <a
+                      key={article.id}
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <Card className="p-0 overflow-hidden hover:shadow-lg transition-all duration-300 group h-full">
+                        <div className={`h-24 relative ${!article.image_url ? fallbackColor : 'bg-slate-100'}`}>
+                          {article.image_url ? (
+                            <img
+                              src={article.image_url}
+                              alt={article.title}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement?.classList.add(fallbackColor);
+                              }}
+                            />
+                          ) : null}
+                          <div className="absolute top-3 left-3">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/90 text-slate-800 backdrop-blur-sm shadow-sm">
+                              {article.category}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <h4 className="font-bold text-slate-900 mb-1 group-hover:text-rose-600 transition-colors line-clamp-2">
+                            {article.title}
+                          </h4>
+                          <div className="flex items-center text-xs text-slate-500 mt-2">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {new Date(article.published_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </Card>
+                    </a>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8 text-slate-500 text-sm bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                  <p>No recommendations yet.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

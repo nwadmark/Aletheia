@@ -29,7 +29,7 @@ export default function LearnPage() {
       setError(null);
       try {
         const categoryParam = selectedCategory === 'All' ? undefined : selectedCategory;
-        const data = await fetchArticles(categoryParam);
+        const data = await fetchArticles(categoryParam, 12);
         setArticles(data);
       } catch (err) {
         console.error("Failed to load articles", err);
@@ -48,7 +48,7 @@ export default function LearnPage() {
       await refreshArticles();
       // Reload articles after refresh
       const categoryParam = selectedCategory === 'All' ? undefined : selectedCategory;
-      const data = await fetchArticles(categoryParam);
+      const data = await fetchArticles(categoryParam, 12);
       setArticles(data);
     } catch (err) {
       console.error("Failed to refresh articles", err);
