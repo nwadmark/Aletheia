@@ -24,3 +24,7 @@ cryptography==43.0.1
 python-dotenv==1.0.1
 # Email validation
 email-validator==2.3.0
+# Article Fetching
+feedparser==6.0.10
+requests==2.31.0
+beautifulsoup4==4.12.3
