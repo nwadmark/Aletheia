@@ -5,7 +5,7 @@ Handles synchronization of symptom logs with Google Calendar.
 import logging
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from pydantic import BaseModel, Field
 
 from models.user import UserInDB
