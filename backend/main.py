@@ -4,7 +4,8 @@ Main FastAPI application for Altheia backend with Google Calendar integration.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import get_settings
-from routers import google_calendar_auth, google_calendar_sync
+from routers import google_calendar_auth, google_calendar_sync, auth, symptom_log
+from database import connect_to_mongo, close_mongo_connection
 
 # Get settings
 settings = get_settings()
@@ -58,6 +59,15 @@ app = FastAPI(
     ]
 )
 
+# Startup and shutdown events
+@app.on_event("startup")
+async def startup_db_client():
+    await connect_to_mongo()
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    await close_mongo_connection()
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -68,6 +78,8 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router)
+app.include_router(symptom_log.router)
 app.include_router(google_calendar_auth.router)
 app.include_router(google_calendar_sync.router)
 

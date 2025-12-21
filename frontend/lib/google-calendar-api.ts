@@ -3,7 +3,15 @@
  * Handles all communication with the backend Google Calendar endpoints
  */
 
-const API_BASE_URL = 'http://localhost:8000/api/google-calendar';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api/google-calendar` : 'http://localhost:8000/api/google-calendar';
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('aletheia_token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+  };
+};
 
 export interface GoogleCalendarStatus {
   connected: boolean;
@@ -30,7 +38,9 @@ export interface BatchSyncResponse {
  */
 export async function getGoogleCalendarStatus(userId: string): Promise<GoogleCalendarStatus> {
   try {
-    const response = await fetch(`${API_BASE_URL}/status?user_id=${userId}`);
+    const response = await fetch(`${API_BASE_URL}/status?user_id=${userId}`, {
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) {
       throw new Error('Failed to fetch Google Calendar status');
     }
@@ -49,9 +59,7 @@ export async function initiateGoogleAuth(userId: string): Promise<string> {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/initiate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ user_id: userId }),
     });
     
@@ -77,9 +85,7 @@ export async function handleGoogleAuthCallback(
   try {
     const response = await fetch(`${API_BASE_URL}/auth/callback`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ code, state }),
     });
     
@@ -102,9 +108,7 @@ export async function disconnectGoogleCalendar(userId: string): Promise<{ succes
   try {
     const response = await fetch(`${API_BASE_URL}/disconnect`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ user_id: userId }),
     });
     
@@ -130,17 +134,15 @@ export async function syncSymptomLog(
   notes?: string
 ): Promise<SyncResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/sync/log`, {
+    const response = await fetch(`${API_BASE_URL}/sync`, { // Endpoint changed to match backend router '/sync' not '/sync/log' based on google_calendar_sync.py line 123
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
-        user_id: userId,
+        // user_id: userId, // User ID is now inferred from token in backend
         log_id: logId,
-        date,
-        symptoms,
-        notes,
+        // date, // Backend seems to only take log_id in SyncLogRequest
+        // symptoms,
+        // notes,
       }),
     });
     
@@ -169,15 +171,11 @@ export async function syncAllLogs(
   }>
 ): Promise<BatchSyncResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/sync/batch`, {
+    const response = await fetch(`${API_BASE_URL}/sync-all`, { // Endpoint changed to match backend router '/sync-all'
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        logs,
-      }),
+      headers: getAuthHeaders(),
+      // Body not needed for sync-all as per backend signature, it fetches from DB
+      body: JSON.stringify({}),
     });
     
     if (!response.ok) {
@@ -200,15 +198,9 @@ export async function deleteSymptomLogFromCalendar(
   logId: string
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/sync/delete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        log_id: logId,
-      }),
+    const response = await fetch(`${API_BASE_URL}/sync/${logId}`, { // Endpoint changed to DELETE /sync/{log_id}
+      method: 'DELETE',
+      headers: getAuthHeaders(),
     });
     
     if (!response.ok) {

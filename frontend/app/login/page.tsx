@@ -22,13 +22,46 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      login(formData.email, 'Sarah User'); // Mock user name
+    try {
+      // 1. Login to get token
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          username: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Invalid email or password');
+      }
+
+      // 2. Fetch user profile
+      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${data.access_token}`
+        }
+      });
+      
+      if (!profileResponse.ok) {
+        throw new Error('Failed to load user profile');
+      }
+
+      const userData = await profileResponse.json();
+
+      login(data.access_token, userData);
       toast.success('Welcome back!');
       router.push('/dashboard');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'An error occurred');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

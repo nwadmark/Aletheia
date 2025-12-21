@@ -75,11 +75,16 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isLastStep) {
-      completeOnboarding(answers);
-      toast.success("Profile setup complete!");
-      router.push('/dashboard');
+      try {
+        await completeOnboarding(answers);
+        toast.success("Profile setup complete!");
+        router.push('/dashboard');
+      } catch (error) {
+        console.error("Onboarding error:", error);
+        toast.error("Failed to save profile. Please try again.");
+      }
     } else {
       setCurrentStep(prev => prev + 1);
     }

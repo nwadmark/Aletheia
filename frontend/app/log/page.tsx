@@ -75,48 +75,49 @@ export default function LogPage() {
       severity: severities[name] || 3
     }));
 
-    addLog({
+    setIsSyncing(true);
+    const savedLogId = await addLog({
       date,
       symptoms: symptomsData,
       notes
     });
 
-    toast.success('Log saved successfully!');
+    if (savedLogId) {
+      toast.success('Log saved successfully!');
 
-    // Auto-sync to Google Calendar if enabled
-    if (googleCalendar.connected && googleCalendar.autoSync && user?.id) {
-      setIsSyncing(true);
-      try {
-        // Get the log we just created (it will have the latest timestamp for this date)
-        const savedLog = getLogByDate(date);
-        if (savedLog) {
+      // Auto-sync to Google Calendar if enabled
+      if (googleCalendar.connected && googleCalendar.autoSync && user?.id) {
+        try {
           const result = await syncSymptomLog(
             user.id,
-            savedLog.id,
+            savedLogId,
             date,
             symptomsData,
             notes
           );
 
           if (result.success && result.event_id) {
-            markLogAsSynced(savedLog.id, result.event_id);
+            markLogAsSynced(savedLogId, result.event_id);
             toast.success('Synced to Google Calendar!', {
               icon: <Calendar className="w-4 h-4" />,
             });
           }
+        } catch (error) {
+          console.error('Auto-sync error:', error);
+          toast.error('Log saved but failed to sync to Google Calendar');
         }
-      } catch (error) {
-        console.error('Auto-sync error:', error);
-        toast.error('Log saved but failed to sync to Google Calendar');
-      } finally {
-        setIsSyncing(false);
       }
-    }
+      
+      // Navigate back after short delay
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 500);
 
-    // Small delay to show sync status before navigating
-    setTimeout(() => {
-      router.push('/dashboard');
-    }, isSyncing ? 1000 : 0);
+    } else {
+      toast.error('Failed to save log');
+    }
+    
+    setIsSyncing(false);
   };
 
   return (

@@ -5,6 +5,7 @@ import os
 import logging
 from datetime import datetime
 from typing import Optional
+from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from google_auth_oauthlib.flow import Flow
@@ -14,6 +15,8 @@ from google.oauth2.credentials import Credentials
 from models.user import UserInDB, GoogleAuthData
 from services.google_calendar_service import GoogleCalendarService
 from utils.encryption import encrypt_token
+from database import get_database
+from utils.security import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -27,24 +30,7 @@ router = APIRouter(
 )
 
 
-# Dependency to get current user (placeholder - implement based on your auth system)
-async def get_current_user() -> UserInDB:
-    """
-    Get the currently authenticated user.
-    This should be replaced with your actual authentication logic.
-    """
-    # TODO: Implement actual user authentication
-    raise HTTPException(status_code=401, detail="Not authenticated")
-
-
-# Dependency to get database (placeholder - implement based on your DB setup)
-async def get_database():
-    """
-    Get database connection.
-    This should be replaced with your actual database logic.
-    """
-    # TODO: Implement actual database connection
-    raise NotImplementedError("Database connection not implemented")
+# Dependencies imported from utils.security and database
 
 
 @router.get(
@@ -198,18 +184,17 @@ async def google_auth_callback(
         calendar_id = calendar_service.create_altheia_calendar(credentials)
         
         # Update user in database
-        # TODO: Implement actual database update
-        # await db.users.update_one(
-        #     {"_id": current_user.id},
-        #     {
-        #         "$set": {
-        #             "google_auth": google_auth.dict(),
-        #             "calendar_settings.calendar_id": calendar_id,
-        #             "calendar_settings.is_enabled": True,
-        #             "updated_at": datetime.utcnow()
-        #         }
-        #     }
-        # )
+        await db.users.update_one(
+            {"_id": ObjectId(current_user.id)},
+            {
+                "$set": {
+                    "google_auth": google_auth.dict(),
+                    "calendar_settings.calendar_id": calendar_id,
+                    "calendar_settings.is_enabled": True,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
         
         logger.info(f"Successfully connected Google Calendar for user {current_user.id}")
         
@@ -273,19 +258,18 @@ async def disconnect_google_calendar(
             logger.warning(f"Failed to revoke token (may already be revoked): {e}")
         
         # Clear stored credentials in database
-        # TODO: Implement actual database update
-        # await db.users.update_one(
-        #     {"_id": current_user.id},
-        #     {
-        #         "$set": {
-        #             "google_auth": None,
-        #             "calendar_settings.is_enabled": False,
-        #             "calendar_settings.calendar_id": None,
-        #             "calendar_settings.last_sync": None,
-        #             "updated_at": datetime.utcnow()
-        #         }
-        #     }
-        # )
+        await db.users.update_one(
+            {"_id": ObjectId(current_user.id)},
+            {
+                "$set": {
+                    "google_auth": None,
+                    "calendar_settings.is_enabled": False,
+                    "calendar_settings.calendar_id": None,
+                    "calendar_settings.last_sync": None,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
         
         logger.info(f"Disconnected Google Calendar for user {current_user.id}")
         
