@@ -9,7 +9,6 @@ import {
   Calendar, 
   TrendingUp, 
   BookOpen, 
-  Settings, 
   LogOut, 
   Menu, 
   X,
@@ -103,10 +102,6 @@ const Navbar = () => {
                     <p className="text-sm font-medium text-slate-900">{user?.name}</p>
                     <p className="text-xs text-slate-500 truncate">{user?.email}</p>
                   </div>
-                  <Link href="/settings" className="flex items-center px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Settings
-                  </Link>
                   <button 
                     onClick={handleLogout}
                     className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
@@ -181,14 +176,6 @@ const Navbar = () => {
               Log Today
             </Link>
             <div className="border-t border-slate-100 my-2 pt-2">
-              <Link
-                href="/settings"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex items-center px-3 py-3 rounded-lg text-base font-medium text-slate-600 hover:bg-slate-50"
-              >
-                <Settings className="w-5 h-5 mr-3" />
-                Settings
-              </Link>
               <button
                 onClick={() => {
                   handleLogout();
