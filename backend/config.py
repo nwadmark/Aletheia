@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     
     # Encryption
     encryption_key: str = Field(..., alias="ENCRYPTION_KEY")
+
+    # Google Gemini API
+    gemini_api_key: str = Field(..., alias="GEMINI_API_KEY")
     
     @property
     def cors_origins_list(self) -> List[str]:

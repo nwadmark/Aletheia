@@ -3,6 +3,7 @@
 import React from 'react';
 import { AppProvider } from '@/lib/store';
 import Navbar from '@/components/navbar';
+import { Chatbot } from '@/components/chatbot';
 import { Toaster } from 'sonner';
 import './globals.css';
 
@@ -19,6 +20,7 @@ export default function RootLayout({
           <main className="flex-1">
             {children}
           </main>
+          <Chatbot />
           <Toaster position="bottom-right" />
         </AppProvider>
       </body>
