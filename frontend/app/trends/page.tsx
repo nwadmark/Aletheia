@@ -6,6 +6,7 @@ import Card from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Download, Filter } from 'lucide-react';
 import Button from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export default function TrendsPage() {
   const { logs } = useApp();

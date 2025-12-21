@@ -23,6 +23,8 @@ export type SymptomLog = {
   }[];
   notes: string;
   timestamp: number;
+  syncedToCalendar?: boolean;
+  calendarEventId?: string;
 };
 
 export type Article = {
@@ -35,12 +37,20 @@ export type Article = {
   image?: string;
 };
 
+type GoogleCalendarState = {
+  connected: boolean;
+  email?: string;
+  calendarId?: string;
+  autoSync: boolean;
+};
+
 type AppState = {
   user: User | null;
   logs: SymptomLog[];
   bookmarks: string[];
   isAuthenticated: boolean;
   isLoading: boolean;
+  googleCalendar: GoogleCalendarState;
 };
 
 type AppContextType = AppState & {
@@ -52,6 +62,10 @@ type AppContextType = AppState & {
   updateLog: (id: string, log: Partial<SymptomLog>) => void;
   toggleBookmark: (articleId: string) => void;
   getLogByDate: (date: string) => SymptomLog | undefined;
+  setGoogleCalendarConnected: (connected: boolean, email?: string, calendarId?: string) => void;
+  setGoogleCalendarAutoSync: (autoSync: boolean) => void;
+  markLogAsSynced: (logId: string, eventId: string) => void;
+  markLogAsUnsynced: (logId: string) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -121,16 +135,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [logs, setLogs] = useState<SymptomLog[]>([]);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [googleCalendar, setGoogleCalendar] = useState<GoogleCalendarState>({
+    connected: false,
+    autoSync: false,
+  });
 
   // Load from local storage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('aletheia_user');
     const storedLogs = localStorage.getItem('aletheia_logs');
     const storedBookmarks = localStorage.getItem('aletheia_bookmarks');
+    const storedGoogleCalendar = localStorage.getItem('aletheia_google_calendar');
 
     if (storedUser) setUser(JSON.parse(storedUser));
     if (storedLogs) setLogs(JSON.parse(storedLogs));
     if (storedBookmarks) setBookmarks(JSON.parse(storedBookmarks));
+    if (storedGoogleCalendar) setGoogleCalendar(JSON.parse(storedGoogleCalendar));
     
     setIsLoading(false);
   }, []);
@@ -148,6 +168,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem('aletheia_bookmarks', JSON.stringify(bookmarks));
   }, [bookmarks]);
+
+  useEffect(() => {
+    localStorage.setItem('aletheia_google_calendar', JSON.stringify(googleCalendar));
+  }, [googleCalendar]);
 
   const login = (email: string, name: string) => {
     const newUser: User = {
@@ -207,6 +231,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return logs.find(log => log.date === date);
   };
 
+  const setGoogleCalendarConnected = (connected: boolean, email?: string, calendarId?: string) => {
+    setGoogleCalendar(prev => ({
+      ...prev,
+      connected,
+      email: connected ? email : undefined,
+      calendarId: connected ? calendarId : undefined,
+    }));
+  };
+
+  const setGoogleCalendarAutoSync = (autoSync: boolean) => {
+    setGoogleCalendar(prev => ({ ...prev, autoSync }));
+  };
+
+  const markLogAsSynced = (logId: string, eventId: string) => {
+    setLogs(logs.map(log =>
+      log.id === logId
+        ? { ...log, syncedToCalendar: true, calendarEventId: eventId }
+        : log
+    ));
+  };
+
+  const markLogAsUnsynced = (logId: string) => {
+    setLogs(logs.map(log =>
+      log.id === logId
+        ? { ...log, syncedToCalendar: false, calendarEventId: undefined }
+        : log
+    ));
+  };
+
   return (
     <AppContext.Provider value={{
       user,
@@ -214,6 +267,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bookmarks,
       isAuthenticated: !!user,
       isLoading,
+      googleCalendar,
       login,
       logout,
       updateProfile,
@@ -221,7 +275,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addLog,
       updateLog,
       toggleBookmark,
-      getLogByDate
+      getLogByDate,
+      setGoogleCalendarConnected,
+      setGoogleCalendarAutoSync,
+      markLogAsSynced,
+      markLogAsUnsynced,
     }}>
       {children}
     </AppContext.Provider>

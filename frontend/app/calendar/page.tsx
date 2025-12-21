@@ -3,12 +3,15 @@
 import React, { useState } from 'react';
 import { useApp } from '@/lib/store';
 import Card from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay } from 'date-fns';
+import { GoogleCalendarSyncButton } from '@/components/google-calendar-sync-button';
+import { syncSymptomLog } from '@/lib/google-calendar-api';
+import { toast } from 'sonner';
 
 export default function CalendarPage() {
-  const { logs } = useApp();
+  const { logs, user, googleCalendar, markLogAsSynced } = useApp();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
@@ -36,6 +39,36 @@ export default function CalendarPage() {
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
 
   const selectedLog = selectedDate ? getLogForDate(selectedDate) : null;
+
+  const handleSyncLog = async (log: typeof logs[0]) => {
+    if (!user?.id) {
+      toast.error('Please log in to sync to Google Calendar');
+      return;
+    }
+
+    if (!googleCalendar.connected) {
+      toast.error('Please connect Google Calendar in Settings first');
+      return;
+    }
+
+    try {
+      const result = await syncSymptomLog(
+        user.id,
+        log.id,
+        log.date,
+        log.symptoms,
+        log.notes
+      );
+
+      if (result.success && result.event_id) {
+        markLogAsSynced(log.id, result.event_id);
+        toast.success('Log synced to Google Calendar!');
+      }
+    } catch (error) {
+      toast.error('Failed to sync log to Google Calendar');
+      console.error('Sync error:', error);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -98,6 +131,11 @@ export default function CalendarPage() {
                     <span className={cn("text-sm font-medium", isToday && !log && "text-rose-600 font-bold")}>
                       {format(date, 'd')}
                     </span>
+                    {log?.syncedToCalendar && (
+                      <div className="absolute top-1 right-1">
+                        <CheckCircle2 className="w-3 h-3 text-green-400" />
+                      </div>
+                    )}
                     {isToday && (
                       <div className="absolute bottom-1 w-1 h-1 rounded-full bg-current opacity-50" />
                     )}
@@ -107,19 +145,27 @@ export default function CalendarPage() {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center justify-center gap-4 mt-8 text-xs text-slate-500">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-rose-200" /> Mild
+            <div className="mt-8 space-y-3">
+              <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-rose-200" /> Mild
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-rose-300" /> Moderate
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-rose-400" /> Severe
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-rose-500" /> Very Severe
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-rose-300" /> Moderate
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-rose-400" /> Severe
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-rose-500" /> Very Severe
-              </div>
+              {googleCalendar.connected && (
+                <div className="flex items-center justify-center gap-1 text-xs text-slate-500">
+                  <CheckCircle2 className="w-3 h-3 text-green-500" />
+                  <span>Synced to Google Calendar</span>
+                </div>
+              )}
             </div>
           </Card>
         </div>
@@ -163,6 +209,17 @@ export default function CalendarPage() {
                       <p className="text-slate-700 text-sm bg-slate-50 p-3 rounded-lg italic">
                         &quot;{selectedLog.notes}&quot;
                       </p>
+                    </div>
+                  )}
+
+                  {googleCalendar.connected && (
+                    <div className="pt-4 border-t border-slate-100">
+                      <GoogleCalendarSyncButton
+                        onSync={() => handleSyncLog(selectedLog)}
+                        synced={selectedLog.syncedToCalendar}
+                        className="w-full"
+                        size="md"
+                      />
                     </div>
                   )}
                 </div>

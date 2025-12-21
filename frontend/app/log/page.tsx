@@ -5,17 +5,19 @@ import { useRouter } from 'next/navigation';
 import { useApp, SYMPTOMS_LIST } from '@/lib/store';
 import Button from '@/components/ui/button';
 import Card from '@/components/ui/card';
-import { Save, ChevronLeft } from 'lucide-react';
+import { Save, ChevronLeft, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { syncSymptomLog } from '@/lib/google-calendar-api';
 
 export default function LogPage() {
   const router = useRouter();
-  const { addLog, getLogByDate, user } = useApp();
+  const { addLog, getLogByDate, user, googleCalendar, markLogAsSynced } = useApp();
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [severities, setSeverities] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Load existing log if editing
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function LogPage() {
     setSeverities(prev => ({ ...prev, [symptom]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (selectedSymptoms.length === 0) {
       toast.error('Please select at least one symptom');
       return;
@@ -80,7 +82,41 @@ export default function LogPage() {
     });
 
     toast.success('Log saved successfully!');
-    router.push('/dashboard');
+
+    // Auto-sync to Google Calendar if enabled
+    if (googleCalendar.connected && googleCalendar.autoSync && user?.id) {
+      setIsSyncing(true);
+      try {
+        // Get the log we just created (it will have the latest timestamp for this date)
+        const savedLog = getLogByDate(date);
+        if (savedLog) {
+          const result = await syncSymptomLog(
+            user.id,
+            savedLog.id,
+            date,
+            symptomsData,
+            notes
+          );
+
+          if (result.success && result.event_id) {
+            markLogAsSynced(savedLog.id, result.event_id);
+            toast.success('Synced to Google Calendar!', {
+              icon: <Calendar className="w-4 h-4" />,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Auto-sync error:', error);
+        toast.error('Log saved but failed to sync to Google Calendar');
+      } finally {
+        setIsSyncing(false);
+      }
+    }
+
+    // Small delay to show sync status before navigating
+    setTimeout(() => {
+      router.push('/dashboard');
+    }, isSyncing ? 1000 : 0);
   };
 
   return (
@@ -173,11 +209,31 @@ export default function LogPage() {
         </Card>
 
         <div className="flex justify-end pt-4 pb-12">
-          <Button size="lg" onClick={handleSave} className="w-full sm:w-auto px-12">
-            <Save className="w-4 h-4 mr-2" />
-            Save Log
+          <Button
+            size="lg"
+            onClick={handleSave}
+            className="w-full sm:w-auto px-12"
+            isLoading={isSyncing}
+          >
+            {isSyncing ? (
+              <>Syncing to Calendar...</>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Log
+              </>
+            )}
           </Button>
         </div>
+
+        {googleCalendar.connected && googleCalendar.autoSync && (
+          <div className="pb-8 text-center">
+            <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
+              <Calendar className="w-4 h-4 text-green-600" />
+              Auto-sync to Google Calendar is enabled
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
