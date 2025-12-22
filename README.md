@@ -1,4 +1,4 @@
-# Altheia - Health Tracking Application
+# Aletheia - Health Tracking Application
 
 A comprehensive health tracking application that helps users monitor symptoms, visualize trends, and sync their health data with Google Calendar.
 
