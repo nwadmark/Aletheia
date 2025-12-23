@@ -3,7 +3,7 @@
  * Handles all communication with the backend Google Calendar endpoints
  */
 
-const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL || "https://aletheia-api.lab-ml-2024.com"}/api/google-calendar`;
+const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL || ""}/api/google-calendar`;
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('aletheia_token');

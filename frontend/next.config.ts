@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://aletheia-backend-2ij6.onrender.com/api/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
