@@ -24,7 +24,7 @@ export default function LoginPage() {
     
     try {
       // 1. Login to get token
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://aletheia-api.lab-ml-2024.com"}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
