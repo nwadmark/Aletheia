@@ -3,7 +3,7 @@ Configuration management for the backend application.
 Loads settings from environment variables.
 """
 import os
-from typing import List
+from typing import List, Optional
 from pydantic_settings import BaseSettings
 from pydantic import Field
 
@@ -27,9 +27,9 @@ class Settings(BaseSettings):
     frontend_url: str = Field(default="http://localhost:3000", alias="FRONTEND_URL")
     
     # Google Calendar Integration
-    google_client_id: str = Field(..., alias="GOOGLE_CLIENT_ID")
-    google_client_secret: str = Field(..., alias="GOOGLE_CLIENT_SECRET")
-    google_redirect_uri: str = Field(..., alias="GOOGLE_REDIRECT_URI")
+    google_client_id: Optional[str] = Field(None, alias="GOOGLE_CLIENT_ID")
+    google_client_secret: Optional[str] = Field(None, alias="GOOGLE_CLIENT_SECRET")
+    google_redirect_uri: Optional[str] = Field(None, alias="GOOGLE_REDIRECT_URI")
     
     # Encryption
     encryption_key: str = Field(..., alias="ENCRYPTION_KEY")
