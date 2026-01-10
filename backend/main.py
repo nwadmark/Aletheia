@@ -3,9 +3,13 @@ Main FastAPI application for Altheia backend with Google Calendar integration.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 from config import get_settings
 from routers import google_calendar_auth, google_calendar_sync, auth, symptom_log, articles, chat
 from database import connect_to_mongo, close_mongo_connection
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Get settings
 settings = get_settings()
@@ -109,5 +113,7 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=settings.port,
-        reload=True if settings.app_env == "development" else False
+        reload=True if settings.app_env == "development" else False,
+        reload_dirs=["backend"],
+        use_colors=True
     )

@@ -2,6 +2,7 @@
 Authentication router implementing Signup, Login, and User Profile endpoints.
 """
 from datetime import datetime, timedelta
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -22,6 +23,7 @@ router = APIRouter(
 )
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 @router.post("/signup", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def signup(user_in: UserCreate, db = Depends(get_database)):
@@ -140,6 +142,8 @@ async def update_user_me(
     user_id = current_user.id
     
     # Filter out None values from update data
+    # Log incoming data
+    logger.info(f"Updating user {current_user.id} with data: {user_update.dict()}")
     update_data = {k: v for k, v in user_update.dict().items() if v is not None}
     
     if not update_data:

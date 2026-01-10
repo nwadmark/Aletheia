@@ -3,6 +3,7 @@ Database configuration and connection management using Motor (AsyncIO).
 """
 import logging
 from motor.motor_asyncio import AsyncIOMotorClient
+from urllib.parse import urlparse
 from config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -19,15 +20,13 @@ async def connect_to_mongo():
     settings = get_settings()
     
     try:
-        logger.info(f"Connecting to MongoDB at {settings.mongodb_uri}")
+        logger.info(f"Connecting to MongoDB...")
         client = AsyncIOMotorClient(settings.mongodb_uri)
-        
-        # Verify connection
+        # Verify connection by trying to connect to the default database
         await client.admin.command('ping')
-        logger.info("Successfully connected to MongoDB")
-        
+        logger.info("Successfully connected to MongoDB.")
         # Initialize database indexes
-        await init_indexes()
+        await init_indexes(client)
         
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
@@ -44,23 +43,22 @@ async def close_mongo_connection():
         client.close()
         logger.info("MongoDB connection closed")
 
-async def get_database():
+async def get_database() -> object:
     """
-    Dependency to get the database instance.
+    Returns the database instance from the client.
     """
-    global client
-    if client is None:
-        # Fallback if connection wasn't established (e.g. during tests)
-        await connect_to_mongo()
-    
-    # Return the default database
-    return client.get_default_database()
+    settings = get_settings()
+    db_name = urlparse(settings.mongodb_uri).path.lstrip('/')
+    db = client[db_name]
+    return db
 
-async def init_indexes():
+async def init_indexes(client: AsyncIOMotorClient):
     """
     Create necessary indexes for collections.
     """
-    db = await get_database()
+    settings = get_settings()
+    db_name = urlparse(settings.mongodb_uri).path.lstrip('/')
+    db = client[db_name]
     
     # User indexes
     # Email must be unique

@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "https://aletheia-backend-2ij6.onrender.com/api/:path*",
+        destination: "https://aletheia-vhkb.onrender.com/api/:path*",
       },
     ];
   },
